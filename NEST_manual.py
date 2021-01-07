@@ -1,11 +1,15 @@
 
 import numpy as np
-from novatel_math.coordinateconverter import great_circle_distance as dist
+# from novatel_math.coordinateconverter import great_circle_distance as dist
 from matplotlib import pyplot as plt
 
 NOISE_FLOOR = -97
 
 TRUTH_POS = [22.31284110424312, 114.04282225982833, 0]
+
+def dist(p1, p2):
+    d = np.sqrt((p1[0]-p2[0])**2 + (p1[1]-p2[1])**2 +(p1[2]-p2[2])**2)
+    return d
 
 def create_inside_log(p):
 
