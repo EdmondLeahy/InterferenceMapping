@@ -5,7 +5,7 @@ from matplotlib import pyplot as plt
 
 NOISE_FLOOR = -97
 
-TRUTH_POS = [22.31284110424312, 114.04282225982833, 0]
+TRUTH_POS = [51.4287955869, -113.8495484453, 0]
 
 def dist(p1, p2):
     # Change to radians
