@@ -3,7 +3,7 @@ import numpy as np
 # from novatel_math.coordinateconverter import great_circle_distance as dist
 from matplotlib import pyplot as plt
 
-NOISE_FLOOR = -97
+NOISE_FLOOR = -83.429
 
 TRUTH_POS = [51.4287955869, -113.8495484453, 0]
 
