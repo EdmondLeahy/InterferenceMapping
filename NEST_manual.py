@@ -8,8 +8,20 @@ NOISE_FLOOR = -97
 TRUTH_POS = [22.31284110424312, 114.04282225982833, 0]
 
 def dist(p1, p2):
-    d = np.sqrt((p1[0]-p2[0])**2 + (p1[1]-p2[1])**2 +(p1[2]-p2[2])**2)
-    return d
+    # Change to radians
+    phi_1 = np.radians(geodetic_1[0])
+    phi_2 = np.radians(geodetic_2[0])
+    lam_1 = np.radians(geodetic_1[1])
+    lam_2 = np.radians(geodetic_2[1])
+    del_phi = phi_2 - phi_1
+    del_lam = lam_2 - lam_1
+
+    haversine = \
+        pow(np.sin(del_phi / 2.0), 2) + np.cos(phi_1) * np.cos(phi_2) * pow(np.sin(del_lam / 2.0),
+                                                                            2)
+    d = 6371e3 * (2.0 * np.arctan2(np.sqrt(haversine), np.sqrt(1 - haversine)))
+
+    return float(d)
 
 def create_inside_log(p):
 
