@@ -1,4 +1,4 @@
-
+import pickle
 import numpy as np
 # from novatel_math.coordinateconverter import great_circle_distance as dist
 from matplotlib import pyplot as plt
@@ -32,10 +32,12 @@ def create_w(x1, x2, d, p):
 
 # Read in data
 data = []
-with open('DATA_TEMP.txt') as data_file:
-    for line in data_file:
-        temp = line.strip('\n').split(' ')
-        data.append([float(i) for i in temp])
+with open('Test1_50_smoothed_int_pos_data.txt', 'rb') as data_file:
+    data = pickle.load(data_file)
+# with open('DATA_TEMP.txt') as data_file:
+#     for line in data_file:
+#         temp = line.strip('\n').split(' ')
+#         data.append([float(i) for i in temp])
 
 def get_model_power(x1, x2, d):
     # inside = np.power(10, (x1 - x2*np.log10(d)/10)) + np.power(10, NOISE_FLOOR/10)
