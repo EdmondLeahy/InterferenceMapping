@@ -1,11 +1,14 @@
 import pickle
 import numpy as np
+import random
 # from novatel_math.coordinateconverter import great_circle_distance as dist
 from matplotlib import pyplot as plt
 
 NOISE_FLOOR = -83.429
 
 TRUTH_POS = [51.4287955869, -113.8495484453, 0]
+
+new_obs = []
 
 def dist(p1, p2):
     # Change to radians
@@ -75,13 +78,15 @@ def estimate_power_decay(noise_floor):
         for obs in data:
             inside = create_inside_log(obs[2])
             if inside > 0:
-                used_data.append(obs)
                 est_power = create_l(inside)  # Estimated received power with noise floor
                 d = dist([obs[0], obs[1], 0], TRUTH_POS)
                 a_row = create_a_row(d)
                 A[row] = a_row
                 Cl[row][row] = np.power(d, 0.25)
                 w[row] = create_w(x_0[0], x_0[1], d, est_power)
+                obs.append(d)
+                new_obs.append([obs[2], d])
+                used_data.append(obs)
             else:
                 w[row] = 0
                 A[row] = [0, 0]
@@ -92,7 +97,10 @@ def estimate_power_decay(noise_floor):
         U = np.matmul(at_cl, w)
         delt = np.matmul(np.linalg.inv(N), U)
         x_0 = [x_0[0]-delt[0], x_0[1]-delt[1]]
-
+        with open('used_data.txt', 'w+') as used_data_file:
+            for data_out in used_data:
+                [used_data_file.write(f'{dat}\t') for dat in data_out]
+                used_data_file.write('\n')
     return x_0
 
 # i = 0
@@ -130,3 +138,23 @@ ax1.scatter(x_axis, plot_model, s=2)
 ax1.scatter(x_axis, p_obs, s=2)
 ax2.scatter(x_axis, diff, s=2)
 plt.show()
+
+
+
+# Try to sim data
+
+#Write the existing data:
+sim_file = open('simulated_data.txt','w+')
+for obs in new_obs:
+    sim_file.write(f'{obs[1]} {obs[0]}\n')
+
+
+start_dist = 800
+# power = -83.25 + (1*random.random())
+new_sim_data = []
+for i in range(1800):
+    d = start_dist + i
+    p = -83 + (0.1*random.random())
+    sim_file.write(f'{d} {p}\n')
+
+sim_file.close()
