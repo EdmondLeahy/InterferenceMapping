@@ -149,12 +149,4 @@ for obs in new_obs:
     sim_file.write(f'{obs[1]} {obs[0]}\n')
 
 
-start_dist = 800
-# power = -83.25 + (1*random.random())
-new_sim_data = []
-for i in range(1800):
-    d = start_dist + i
-    p = -83 + (0.1*random.random())
-    sim_file.write(f'{d} {p}\n')
-
 sim_file.close()

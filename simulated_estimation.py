@@ -2,8 +2,9 @@ import pickle
 import numpy as np
 # from novatel_math.coordinateconverter import great_circle_distance as dist
 from matplotlib import pyplot as plt
+import random
 
-NOISE_FLOOR = -83.429
+NOISE_FLOOR = -83
 
 TRUTH_POS = [51.4287955869, -113.8495484453, 0]
 
@@ -28,12 +29,6 @@ def creat_plot_data(x1, x2, d, p):
 def create_w(x1, x2, d, p):
     return -1*x1 + x2*np.log10(d) - p
 
-# Read in data
-data = []
-with open('simulated_data.txt', 'r+') as data_file:
-    data_str = data_file.readlines()
-    for line in data_str:
-        data.append([float(d) for d in line.split()])
 
 def get_model_power(x1, x2, d):
     # inside = np.power(10, (x1 - x2*np.log10(d)/10)) + np.power(10, NOISE_FLOOR/10)
@@ -42,7 +37,16 @@ def get_model_power(x1, x2, d):
 
     return 10 * np.log10(inside) if inside > 0 else None
 
-def estimate_power_decay(noise_floor):
+def EST_estimate_power_decay(data):
+
+    x_0 = [-14, -7]
+    model_p = []
+    for obs in data:
+        logd = np.log10(obs[0])
+        model_power = x_0[0]*logd + x_0[1]
+        model_p.append(model_power)
+
+def NEST_estimate_power_decay(data):
 
     # Create Design matrix
     x_0 = [-14, -7]
@@ -50,10 +54,10 @@ def estimate_power_decay(noise_floor):
     delt = [10]
     while not any([np.abs(v) < 0.000001for v in delt]) and not i > 10:
         i += 1
-        print(i)
+        # print(i)
         A = np.empty([len(data), 2])
         w = np.empty(len(data))
-        Cl = np.zeros([len(data), len(data)])
+        #Cl = np.zeros([len(data), len(data)])
         row = 0
         used_data = []
         for obs in data:
@@ -63,17 +67,17 @@ def estimate_power_decay(noise_floor):
                 d = obs[0]
                 a_row = create_a_row(d)
                 A[row] = a_row
-                Cl[row][row] = np.power(d, 0.25)
+                #Cl[row][row] = 1 #np.power(d, 0.25)
                 w[row] = create_w(x_0[0], x_0[1], d, est_power)
                 used_data.append(obs)
             else:
                 w[row] = 0
                 A[row] = [0, 0]
             row += 1
-        at_cl = np.matmul(A.transpose(), Cl)
-        N = np.matmul(at_cl, A)
+        #at_cl = np.matmul(A.transpose(), Cl)
+        N = np.matmul(A.transpose(), A)
 
-        U = np.matmul(at_cl, w)
+        U = np.matmul(A.transpose(), w)
         delt = np.matmul(np.linalg.inv(N), U)
         x_0 = [x_0[0]-delt[0], x_0[1]-delt[1]]
         with open('used_data.txt', 'w+') as used_data_file:
@@ -82,24 +86,56 @@ def estimate_power_decay(noise_floor):
                 used_data_file.write('\n')
     return x_0
 
-x_0 = estimate_power_decay(NOISE_FLOOR)
 
-plot_model = []
-p_obs = []
-p_used_obs = []
-x_axis = []
-x_axis_all = []
-diff = []
-i = 0
-for obs in data:
-    d = obs[0]
-    model_power = get_model_power(x_0[0], x_0[1], d)
-    if model_power is not None:
-        i += 1
-        x_axis.append(d)
-        p_obs.append(obs[1])
-        plot_model.append(model_power)
-        diff.append(np.power((model_power-obs[1]), 2))
+
+# Read in data
+data_real = []
+with open('simulated_data.txt', 'r+') as data_file:
+    data_str = data_file.readlines()
+    for line in data_str:
+        data_real.append([float(d) for d in line.split()])
+
+
+rms_res = []
+
+for i in range(0, 10000, 100):
+    print(f"Starting {i}")
+    data = data_real.copy()
+    start_dist = 800
+    # power = -83.25 + (1*random.random())
+    new_sim_data = []
+    for j in range(start_dist, start_dist+i, 10):
+        d = j
+        p = NOISE_FLOOR+0.01 + (0.1*random.random())
+        data.append([d, p])
+
+    x_0 = NEST_estimate_power_decay(data)
+
+    plot_model = []
+    p_obs = []
+    p_used_obs = []
+    x_axis = []
+    x_axis_all = []
+    diff = []
+    i = 0
+    for obs in data:
+        d = obs[0]
+        model_power = get_model_power(x_0[0], x_0[1], d)
+        if model_power is not None:
+            i += 1
+            x_axis.append(d)
+            p_obs.append(obs[1])
+            plot_model.append(model_power)
+            diff.append(np.power((model_power-obs[1]), 2))
+
+    rms = np.sqrt(np.mean(np.array(diff) ** 2))
+    rms_res.append(rms)
+
+
+#plt.plot(rms_res)
+ax1 = plt.figure().add_subplot(111)
+ax1.scatter([d for d in range(800, 800+len(rms_res))], rms_res, s=2)
+plt.show()
 
 print('RMS = {}'.format(np.sqrt(np.mean(np.array(diff)**2))))
 ax1 = plt.figure().add_subplot(111)
