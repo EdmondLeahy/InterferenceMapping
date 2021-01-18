@@ -98,7 +98,7 @@ with open('simulated_data.txt', 'r+') as data_file:
 
 rms_res = []
 
-for i in range(0, 10000, 100):
+for i in range(0, 100000, 1000):
     print(f"Starting {i}")
     data = data_real.copy()
     start_dist = 800
@@ -106,7 +106,7 @@ for i in range(0, 10000, 100):
     new_sim_data = []
     for j in range(start_dist, start_dist+i, 10):
         d = j
-        p = NOISE_FLOOR+0.01 + (0.1*random.random())
+        p = NOISE_FLOOR-0.1 + (0.06*random.random())
         data.append([d, p])
 
     x_0 = NEST_estimate_power_decay(data)
