@@ -41,10 +41,25 @@ def EST_estimate_power_decay(data):
 
     x_0 = [-14, -7]
     model_p = []
+    A = np.empty([len(data), 2])
+    w = np.empty(len(data))
+    row = 0
     for obs in data:
         logd = np.log10(obs[0])
-        model_power = x_0[0]*logd + x_0[1]
+        model_power = x_0[0] + x_0[1]*logd
         model_p.append(model_power)
+        A[row] = [1, logd]
+        w[row] = model_power - obs[1]
+        row += 1
+
+    At = np.transpose(A)
+    N = np.matmul(At, A)
+    U = np.matmul(At, w)
+    delt = np.matmul(np.linalg.inv(N), U)
+    x_0 = [x_0[0] - delt[0], x_0[1] - delt[1]]
+
+    return x_0
+
 
 def NEST_estimate_power_decay(data):
 
@@ -57,7 +72,7 @@ def NEST_estimate_power_decay(data):
         # print(i)
         A = np.empty([len(data), 2])
         w = np.empty(len(data))
-        #Cl = np.zeros([len(data), len(data)])
+        Cl = np.zeros([len(data), len(data)])
         row = 0
         used_data = []
         for obs in data:
@@ -67,17 +82,17 @@ def NEST_estimate_power_decay(data):
                 d = obs[0]
                 a_row = create_a_row(d)
                 A[row] = a_row
-                #Cl[row][row] = 1 #np.power(d, 0.25)
+                Cl[row][row] = 1/np.power(d, 4)#;np.power(d, 0.5)
                 w[row] = create_w(x_0[0], x_0[1], d, est_power)
                 used_data.append(obs)
             else:
                 w[row] = 0
                 A[row] = [0, 0]
             row += 1
-        #at_cl = np.matmul(A.transpose(), Cl)
-        N = np.matmul(A.transpose(), A)
+        at_cl = np.matmul(A.transpose(), Cl)
+        N = np.matmul(at_cl, A)
 
-        U = np.matmul(A.transpose(), w)
+        U = np.matmul(at_cl, w)
         delt = np.matmul(np.linalg.inv(N), U)
         x_0 = [x_0[0]-delt[0], x_0[1]-delt[1]]
         with open('used_data.txt', 'w+') as used_data_file:
@@ -96,9 +111,10 @@ with open('simulated_data.txt', 'r+') as data_file:
         data_real.append([float(d) for d in line.split()])
 
 
-rms_res = []
+rms_res_NEST = []
+rms_res_EST = []
 
-for i in range(0, 100000, 1000):
+for i in range(0, 100000, 100):
     print(f"Starting {i}")
     data = data_real.copy()
     start_dist = 800
@@ -106,42 +122,68 @@ for i in range(0, 100000, 1000):
     new_sim_data = []
     for j in range(start_dist, start_dist+i, 10):
         d = j
-        p = NOISE_FLOOR-0.1 + (0.06*random.random())
+        p = NOISE_FLOOR + (0.1*random.random())
         data.append([d, p])
 
-    x_0 = NEST_estimate_power_decay(data)
+    x_0_NEST = NEST_estimate_power_decay(data)
+    x_0_EST = EST_estimate_power_decay(data)
 
-    plot_model = []
-    p_obs = []
+    plot_model_NEST = []
+    plot_model_EST = []
+    p_obs_NEST = []
+    p_obs_EST = []
     p_used_obs = []
     x_axis = []
     x_axis_all = []
-    diff = []
+    diff_NEST = []
+    diff_EST = []
     i = 0
+    j=0
     for obs in data:
         d = obs[0]
-        model_power = get_model_power(x_0[0], x_0[1], d)
-        if model_power is not None:
+        NEST_model_power = get_model_power(x_0_NEST[0], x_0_NEST[1], d)
+        EST_model_power = x_0_EST[0] + x_0_EST[1]*np.log10(d)
+        if NEST_model_power is not None:
             i += 1
             x_axis.append(d)
-            p_obs.append(obs[1])
-            plot_model.append(model_power)
-            diff.append(np.power((model_power-obs[1]), 2))
+            p_obs_NEST.append(obs[1])
+            plot_model_NEST.append(NEST_model_power)
+            diff_NEST.append(np.power((NEST_model_power-obs[1]), 2))
+        if EST_model_power is not None:
+            j += 1
+            p_obs_EST.append(obs[1])
+            plot_model_EST.append(EST_model_power)
+            diff_EST.append(np.power((EST_model_power-obs[1]), 2))
 
-    rms = np.sqrt(np.mean(np.array(diff) ** 2))
-    rms_res.append(rms)
+
+    rms_NEST = np.sqrt(np.mean(np.array(diff_NEST) ** 2))
+    rms_res_NEST.append(rms_NEST)
+    rms_EST = np.sqrt(np.mean(np.array(diff_EST) ** 2))
+    rms_res_EST.append(rms_EST)
 
 
 #plt.plot(rms_res)
 ax1 = plt.figure().add_subplot(111)
-ax1.scatter([d for d in range(800, 800+len(rms_res))], rms_res, s=2)
+ax1.scatter([d for d in range(800, 800+len(rms_res_NEST))], rms_res_NEST, s=2)
+ax1.scatter([d for d in range(800, 800+len(rms_res_EST))], rms_res_EST, s=2)
+ax1.legend(['NEST', 'Est'])
 plt.show()
 
-print('RMS = {}'.format(np.sqrt(np.mean(np.array(diff)**2))))
+print('RMS NEST = {}'.format(np.sqrt(np.mean(np.array(diff_NEST)**2))))
+print('RMS EST = {}'.format(np.sqrt(np.mean(np.array(diff_EST)**2))))
 ax1 = plt.figure().add_subplot(111)
 ax2 = plt.figure().add_subplot(111)
+ax3 = plt.figure().add_subplot(111)
+ax4 = plt.figure().add_subplot(111)
 
-ax1.scatter(x_axis, plot_model, s=2)
-ax1.scatter(x_axis, p_obs, s=2)
-ax2.scatter(x_axis, diff, s=2)
+ax1.scatter(x_axis, plot_model_NEST, s=2)
+ax1.scatter(x_axis, p_obs_NEST, s=2)
+ax1.set_title('NEST Model')
+ax2.scatter(x_axis, diff_NEST, s=2)
+ax2.set_title('NEST Diff')
+ax3.scatter(x_axis, plot_model_EST, s=2)
+ax3.scatter(x_axis, p_obs_EST, s=2)
+ax3.set_title('EST Model')
+ax4.scatter(x_axis, diff_EST, s=2)
+ax4.set_title('EST Diff')
 plt.show()
