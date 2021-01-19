@@ -4,7 +4,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 import random
 
-NOISE_FLOOR = -83.5
+NOISE_FLOOR = -77.73
 
 TRUTH_POS = [51.4287955869, -113.8495484453, 0]
 
@@ -103,27 +103,11 @@ def NEST_estimate_power_decay(data):
 
 
 
-# Read in data
-data_real = []
-with open('simulated_data.txt', 'r+') as data_file:
-    data_str = data_file.readlines()
-    for line in data_str:
-        data_real.append([float(d) for d in line.split()])
+def calc_model_fit(data):
+    rms_res_NEST = []
+    rms_res_EST = []
 
-
-rms_res_NEST = []
-rms_res_EST = []
-
-for i in range(0, 10000, 100):
-    print(f"Starting {i}")
-    data = data_real.copy()
-    start_dist = 800
-    power = -83.25 + (1*random.random())
-    new_sim_data = []
-    for j in range(start_dist, start_dist+i, 10):
-        d = j
-        p = NOISE_FLOOR + (0.1*random.random())
-        data.append([d, p])
+    data = data.copy()
 
     x_0_NEST = NEST_estimate_power_decay(data)
     x_0_EST = EST_estimate_power_decay(data)
@@ -155,35 +139,74 @@ for i in range(0, 10000, 100):
             plot_model_EST.append(EST_model_power)
             diff_EST.append(np.power((EST_model_power-obs[1]), 2))
 
+    rmse_NEST = np.sqrt(np.mean(np.array(diff_NEST)**2))
+    rmse_EST = np.sqrt(np.mean(np.array(diff_EST)**2))
 
-    rms_NEST = np.sqrt(np.mean(np.array(diff_NEST) ** 2))
-    rms_res_NEST.append(rms_NEST)
-    rms_EST = np.sqrt(np.mean(np.array(diff_EST) ** 2))
-    rms_res_EST.append(rms_EST)
+    return rmse_NEST, rmse_EST
 
 
-#plt.plot(rms_res)
+# Read in est loc data
+data_est = []
+with open('est_data_power_distance.dat', 'r+') as data_file:
+    data_str = data_file.readlines()
+    for line in data_str:
+        data_est.append([float(d) for d in line.split()])
+# Read in truth loc data
+data_truth = []
+with open('truth_data_power_distance.dat', 'r+') as data_file:
+    data_str = data_file.readlines()
+    for line in data_str:
+        data_truth.append([float(d) for d in line.split()])
+
+nest_truths = []
+nest_ests = []
+for i in range(-1000, 1000, 10):
+    print(f'Starting {i}')
+    # Make noise floor from data:
+    NOISE_FLOOR = min(d[1] for d in data_est) + i/1000
+    nest_estimated, est_estimated = calc_model_fit(data_est)
+    nest_truth, est_truth = calc_model_fit(data_truth)
+    nest_truths.append(nest_truth)
+    nest_ests.append(nest_estimated)
+
+
 ax1 = plt.figure().add_subplot(111)
-ax1.scatter([d for d in range(800, 800+len(rms_res_NEST))], rms_res_NEST, s=2)
-ax1.scatter([d for d in range(800, 800+len(rms_res_EST))], rms_res_EST, s=2)
-ax1.legend(['NEST', 'Est'])
+ax1.scatter([d/1000 for d in range(-100, 100)], nest_truths, s=2)
+ax1.scatter([d/1000 for d in range(-100, 100)], nest_ests, s=2)
+ax1.legend(['TRUTH', 'Est'])
 plt.show()
+# print(f'NEST estimated RMS:\t{nest_estimated};\tEst estimated RMS:\t{est_estimated}')
+# print(f'NEST truth RMS:\t\t{nest_truth};\tEst estimated RMS:\t{est_truth}')
+# if nest_truth < nest_estimated:
+#     print('NEST CHOOSES TRUTH')
+# else:
+#     print('NEST CHOOSES WRONG')
 
-print('RMS NEST = {}'.format(np.sqrt(np.mean(np.array(diff_NEST)**2))))
-print('RMS EST = {}'.format(np.sqrt(np.mean(np.array(diff_EST)**2))))
-ax1 = plt.figure().add_subplot(111)
-ax2 = plt.figure().add_subplot(111)
-ax3 = plt.figure().add_subplot(111)
-ax4 = plt.figure().add_subplot(111)
 
-ax1.scatter(x_axis, plot_model_NEST, s=2)
-ax1.scatter(x_axis, p_obs_NEST, s=2)
-ax1.set_title('NEST Model')
-ax2.scatter(x_axis, diff_NEST, s=2)
-ax2.set_title('NEST Diff')
-ax3.scatter(x_axis, plot_model_EST, s=2)
-ax3.scatter(x_axis, p_obs_EST, s=2)
-ax3.set_title('EST Model')
-ax4.scatter(x_axis, diff_EST, s=2)
-ax4.set_title('EST Diff')
-plt.show()
+
+# #plt.plot(rms_res)
+# ax1 = plt.figure().add_subplot(111)
+# ax1.scatter([d for d in range(800, 800+len(rms_res_NEST))], rms_res_NEST, s=2)
+# ax1.scatter([d for d in range(800, 800+len(rms_res_EST))], rms_res_EST, s=2)
+# ax1.legend(['NEST', 'Est'])
+# plt.show()
+#
+# print('RMS NEST = {}'.format(np.sqrt(np.mean(np.array(diff_NEST)**2))))
+# print('RMS EST = {}'.format(np.sqrt(np.mean(np.array(diff_EST)**2))))
+# ax1 = plt.figure().add_subplot(111)
+# ax2 = plt.figure().add_subplot(111)
+# ax3 = plt.figure().add_subplot(111)
+# ax4 = plt.figure().add_subplot(111)
+#
+# ax1.scatter(x_axis, plot_model_NEST, s=2)
+# ax1.scatter(x_axis, p_obs_NEST, s=2)
+# ax1.set_title('NEST Model')
+# ax1.hlines(NOISE_FLOOR, min(x_axis), max(x_axis))
+# ax2.scatter(x_axis, diff_NEST, s=2)
+# ax2.set_title('NEST Diff')
+# ax3.scatter(x_axis, plot_model_EST, s=2)
+# ax3.scatter(x_axis, p_obs_EST, s=2)
+# ax3.set_title('EST Model')
+# ax4.scatter(x_axis, diff_EST, s=2)
+# ax4.set_title('EST Diff')
+# plt.show()
