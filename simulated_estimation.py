@@ -4,7 +4,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 import random
 
-NOISE_FLOOR = -83.5
+NOISE_FLOOR = -77.73 - 0.1
 
 TRUTH_POS = [51.4287955869, -113.8495484453, 0]
 
@@ -82,7 +82,12 @@ def NEST_estimate_power_decay(data):
                 d = obs[0]
                 a_row = create_a_row(d)
                 A[row] = a_row
-                Cl[row][row] = 1/np.power(d, 4)#;np.power(d, 0.5)
+                if d > 100:
+                    weight = 1/np.power(d, 2)
+                else:
+                    weight = 1
+
+                Cl[row][row] = weight#;np.power(d, 0.5)
                 w[row] = create_w(x_0[0], x_0[1], d, est_power)
                 used_data.append(obs)
             else:
@@ -105,7 +110,7 @@ def NEST_estimate_power_decay(data):
 
 # Read in data
 data_real = []
-with open('simulated_data.txt', 'r+') as data_file:
+with open('spot2_data_power_distance.dat', 'r+') as data_file:
     data_str = data_file.readlines()
     for line in data_str:
         data_real.append([float(d) for d in line.split()])
@@ -114,11 +119,11 @@ with open('simulated_data.txt', 'r+') as data_file:
 rms_res_NEST = []
 rms_res_EST = []
 
-for i in range(0, 10000, 100):
+for i in range(0, 100000, 10000):
     print(f"Starting {i}")
     data = data_real.copy()
     start_dist = 800
-    power = -83.25 + (1*random.random())
+    power = NOISE_FLOOR
     new_sim_data = []
     for j in range(start_dist, start_dist+i, 10):
         d = j

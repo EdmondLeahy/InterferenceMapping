@@ -82,7 +82,7 @@ def NEST_estimate_power_decay(data):
                 d = obs[0]
                 a_row = create_a_row(d)
                 A[row] = a_row
-                Cl[row][row] = 1/np.power(d, 4)#;np.power(d, 0.5)
+                Cl[row][row] = 1/np.power(d, 2)#;np.power(d, 0.5)
                 w[row] = create_w(x_0[0], x_0[1], d, est_power)
                 used_data.append(obs)
             else:
@@ -144,36 +144,33 @@ def calc_model_fit(data):
 
     return rmse_NEST, rmse_EST
 
+datasets = ['spot1_data_power_distance.dat', 'spot2_data_power_distance.dat', 'spot3_data_power_distance.dat',
+            'spot4_data_power_distance.dat', 'spot5_data_power_distance.dat', 'spot6_data_power_distance.dat',
+            'est_data_power_distance.dat', 'truth_data_power_distance.dat']
 
-# Read in est loc data
-data_est = []
-with open('est_data_power_distance.dat', 'r+') as data_file:
-    data_str = data_file.readlines()
-    for line in data_str:
-        data_est.append([float(d) for d in line.split()])
-# Read in truth loc data
-data_truth = []
-with open('truth_data_power_distance.dat', 'r+') as data_file:
-    data_str = data_file.readlines()
-    for line in data_str:
-        data_truth.append([float(d) for d in line.split()])
+data_bank = []
+for dataset in datasets:
+    data_points = []
+    with open(dataset, 'r+') as data_file:
+        data_str = data_file.readlines()
+        for line in data_str:
+            data_points.append([float(d) for d in line.split()])
+    data_bank.append(data_points)
+
 
 nest_truths = []
 nest_ests = []
-for i in range(-1000, 1000, 10):
-    print(f'Starting {i}')
-    # Make noise floor from data:
-    NOISE_FLOOR = min(d[1] for d in data_est) + i/1000
-    nest_estimated, est_estimated = calc_model_fit(data_est)
-    nest_truth, est_truth = calc_model_fit(data_truth)
-    nest_truths.append(nest_truth)
+NOISE_FLOOR = min(d[1] for d in data_bank[0])
+print(NOISE_FLOOR)
+for dataset in data_bank:
+    nest_estimated, est_estimated = calc_model_fit(dataset)
     nest_ests.append(nest_estimated)
 
 
 ax1 = plt.figure().add_subplot(111)
-ax1.scatter([d/1000 for d in range(-100, 100)], nest_truths, s=2)
-ax1.scatter([d/1000 for d in range(-100, 100)], nest_ests, s=2)
-ax1.legend(['TRUTH', 'Est'])
+#ax1.scatter(range(len(datasets)), nest_ests, s=2)
+ax1.bar(range(len(datasets)), [d for d in nest_ests])
+# ax1.grid()
 plt.show()
 # print(f'NEST estimated RMS:\t{nest_estimated};\tEst estimated RMS:\t{est_estimated}')
 # print(f'NEST truth RMS:\t\t{nest_truth};\tEst estimated RMS:\t{est_truth}')
