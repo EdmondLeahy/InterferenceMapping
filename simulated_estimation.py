@@ -4,7 +4,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 import random
 
-NOISE_FLOOR = -77.73 - 0.1
+NOISE_FLOOR = -77.73
 
 TRUTH_POS = [51.4287955869, -113.8495484453, 0]
 
@@ -166,6 +166,9 @@ for i in range(0, 100000, 10000):
     rms_EST = np.sqrt(np.mean(np.array(diff_EST) ** 2))
     rms_res_EST.append(rms_EST)
 
+
+print(np.mean(p_obs_NEST))
+print(NOISE_FLOOR)
 
 #plt.plot(rms_res)
 ax1 = plt.figure().add_subplot(111)
